@@ -31,5 +31,5 @@ jobs:
       # Run tests with Poetry
       - name: Run tests
         run: |
-          poetry run python manage.py test  # Run tests using Poetry's virtual environment
+          poetry run python _file_sharing_app/manage.py test  # Run tests using Poetry's virtual environment
 
