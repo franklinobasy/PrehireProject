@@ -54,13 +54,18 @@ jobs:
         run: |
           poetry install --no-interaction --no-ansi
 
-      # Step 6: Run tests with Poetry
+      # Step 6: Apply database migrations
+      - name: Run makemigrations and migrate
+        run: |
+          poetry run python _file_sharing_app/manage.py makemigrations
+          poetry run python _file_sharing_app/manage.py migrate
+
+      # Step 7: Run tests with Poetry
       - name: Run tests
         run: |
-          poetry run python manage.py test --verbosity=2
-        working-directory: _file_sharing_app
+          poetry run python _file_sharing_app/manage.py test --verbosity=2
 
-      # Step 7: Annotate errors if tests fail
+      # Step 8: Annotate errors if tests fail
       - name: Annotate test errors
         if: failure()
         run: echo "Tests failed. Please review the output logs and fix the errors."
