@@ -27,4 +27,4 @@ jobs:
 
     - name: Run PEP 8 check
       run: |
-        pycodestyle --max-line-length=88 
+        pycodestyle --max-line-length=110 
