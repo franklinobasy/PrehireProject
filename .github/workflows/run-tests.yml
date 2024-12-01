@@ -1,54 +1,66 @@
 name: Test Code Pre-Deployment
 
-on: [push]
+on:
+  push:
+    branches:
+      - dev
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
-    steps:
-      # Checkout repository
-      - name: Checkout repository
-        uses: actions/checkout@v2
 
-      # Set up Python
+    env:
+      DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+      DEBUG: ${{ secrets.DEBUG }}
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_STORAGE_BUCKET_NAME: ${{ secrets.AWS_STORAGE_BUCKET_NAME }}
+      AWS_S3_REGION_NAME: ${{ secrets.AWS_S3_REGION_NAME }}
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Python
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.12
 
-      # Cache Poetry dependencies
+      # Step 3: Cache Poetry dependencies
       - name: Cache Poetry dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.cache/pypoetry/virtualenvs
           key: ${{ runner.os }}-poetry-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-poetry-
 
-      # Install Poetry
+      # Step 4: Install Poetry
       - name: Install Poetry
         run: |
           curl -sSL https://install.python-poetry.org | python3 -
           echo "$HOME/.local/bin" >> $GITHUB_PATH
+          poetry --version
 
-      # Install dependencies using Poetry
+      # Step 5: Install dependencies using Poetry
       - name: Install dependencies
         run: |
           poetry install --no-interaction --no-ansi
 
-      # Set environment variables
-      - name: Set environment variables
-        run: |
-          echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" >> $GITHUB_ENV
-          echo "DEBUG=${{ secrets.DEBUG }}" >> $GITHUB_ENV
-          echo "SENTRY_DSN=${{ secrets.SENTRY_DSN }}" >> $GITHUB_ENV
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-          echo "AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}" >> $GITHUB_ENV
-          echo "AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}" >> $GITHUB_ENV
-
-      # Run tests with Poetry
+      # Step 6: Run tests with Poetry
       - name: Run tests
         run: |
-          poetry run python _file_sharing_app/manage.py test
+          poetry run python manage.py test --verbosity=2
+        working-directory: _file_sharing_app
+
+      # Step 7: Annotate errors if tests fail
+      - name: Annotate test errors
+        if: failure()
+        run: echo "Tests failed. Please review the output logs and fix the errors."
