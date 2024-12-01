@@ -4,46 +4,66 @@ from teams.models import Team
 from django.contrib.auth.models import User
 
 
+from rest_framework import serializers
+from .models import File, SharedFile
+from teams.models import Team
+from django.contrib.auth.models import User
+
 class FileSerializer(serializers.ModelSerializer):
     """
     Serializer for the File model, including metadata and access details.
     """
     uploaded_by = serializers.ReadOnlyField(source='uploaded_by.username')
+    shared_with_users = serializers.SerializerMethodField()
     shared_with_teams = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
-    file = serializers.FileField(write_only=True) 
+    file = serializers.FileField(write_only=True)
 
     class Meta:
         model = File
         fields = [
-            'id', 'file', 'uploaded_by', 'uploaded_at', 'shared_with_teams', 'permissions'
+            'uuid', 'file', 'uploaded_by', 'uploaded_at', 'shared_with_users', 'shared_with_teams', 'permissions'
         ]
+
+    def get_shared_with_users(self, obj):
+        """
+        Returns a list of usernames who have the file shared with them, by querying UserFilePermission.
+        """
+        # Access the related SharedFile instance and fetch associated users from UserFilePermission
+        shared_info = obj.shared_info
+        user_permissions = shared_info.userfilepermission_set.all()
+        return [user_permission.user.username for user_permission in user_permissions]
 
     def get_shared_with_teams(self, obj):
         """
-        Return the names of teams the file is shared with.
+        Returns a list of team names who have the file shared with them, by querying TeamFilePermission.
         """
-        return obj.shared_with_teams.values_list('name', flat=True)
+        # Access the related SharedFile instance and fetch associated teams from TeamFilePermission
+        shared_info = obj.shared_info
+        team_permissions = shared_info.teamfilepermission_set.all()
+        return [team_permission.team.name for team_permission in team_permissions]
 
     def get_permissions(self, obj):
         """
-        Returns a dictionary containing shared permissions for teams and users.
+        Returns a dictionary containing shared permissions for users and teams.
         Includes only users and teams the file is shared with.
         """
         permissions = {}
         shared_info = obj.shared_info  # Access the related SharedFile instance
 
         if shared_info:
-            # Shared permissions for users
+            # Fetch user permissions
             user_permissions = {
-                user.username: shared_info.permissions
-                for user in shared_info.shared_with_user.all()
+                user_permission.user.username: user_permission.permission
+                for user_permission in shared_info.userfilepermission_set.all()
             }
-            # Shared permissions for teams
+
+            # Fetch team permissions
             team_permissions = {
-                team.name: shared_info.permissions
-                for team in shared_info.shared_with_team.all()
+                team_permission.team.name: team_permission.permission
+                for team_permission in shared_info.teamfilepermission_set.all()
             }
+
             permissions['users'] = user_permissions
             permissions['teams'] = team_permissions
 
@@ -56,6 +76,7 @@ class FileSerializer(serializers.ModelSerializer):
         file = validated_data.pop('file')
         instance = super().create(validated_data)
 
+        # Set file metadata
         file_name = file.name
         file_size = file.size
 
@@ -68,17 +89,7 @@ class FileSerializer(serializers.ModelSerializer):
 
 
 class SharedFileSerializer(serializers.ModelSerializer):
-    shared_with_user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True)
-    shared_with_team = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all(), many=True)
-
     class Meta:
         model = SharedFile
-        fields = ['file', 'shared_with_user', 'user_permissions', 'shared_with_team', 'team_permissions']
+        fields = ['file']
 
-    def validate(self, data):
-        """
-        Custom validation for permissions.
-        """
-        if not data.get('shared_with_user') and not data.get('shared_with_team'):
-            raise serializers.ValidationError("You must specify at least one user or team to share with.")
-        return data

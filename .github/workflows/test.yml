@@ -1,0 +1,35 @@
+name: Test Deployment
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9  # Adjust to your desired Python version
+
+      # Install Poetry
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH  # Add Poetry to path
+
+      # Install dependencies using Poetry
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction --no-ansi  # Install dependencies without prompts
+
+      # Run tests with Poetry
+      - name: Run tests
+        run: |
+          poetry run python manage.py test  # Run tests using Poetry's virtual environment
+

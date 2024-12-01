@@ -34,5 +34,6 @@ urlpatterns = [
 
     path('admin/', admin.site.urls),
     path('api/auth/', include('authapp.urls')),
-    path('api/files/', include('files.urls'))
+    path('api/files/', include('files.urls')),
+    path('api/teams/', include('teams.urls')),
 ]
