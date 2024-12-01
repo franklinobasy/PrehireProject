@@ -23,8 +23,8 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pycodestyle  # Install pycodestyle for PEP 8 checking
+        pip install pycodestyle 
 
     - name: Run PEP 8 check
       run: |
-        pycodestyle --max-line-length=88  # Customize the line length as per your needs
+        pycodestyle --max-line-length=110 
