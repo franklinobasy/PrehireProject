@@ -51,4 +51,4 @@ jobs:
       # Run tests with Poetry
       - name: Run tests
         run: |
-          poetry run python manage.py test
+          poetry run _file_sharing_app/python manage.py test
