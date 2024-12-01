@@ -6,19 +6,18 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 # Define the authorization configuration for Swagger
 swagger_auth = openapi.Parameter(
-    'Authorization',
+    "Authorization",
     openapi.IN_HEADER,
     description="JWT Authorization header using the Bearer scheme. Example: 'Bearer <your_token>'",
     required=True,
-    type=openapi.TYPE_STRING
+    type=openapi.TYPE_STRING,
 )
-
 
 
 schema_view = get_schema_view(
     openapi.Info(
         title="FileShare API",
-        default_version='v1',
+        default_version="v1",
         description="API documentation for FileShare",
         terms_of_service="https://www.google.com/policies/terms/",
         contact=openapi.Contact(email="franklin.obasi@bimodalconsulting.com"),

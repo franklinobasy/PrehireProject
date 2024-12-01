@@ -1,11 +1,16 @@
+from rest_framework.throttling import UserRateThrottle
+
+
+class CustomUploadThrottle(UserRateThrottle):
+    rate = "3/min"  # Limit to 3 requests per minute
 
 
 MAX_FILE_SIZE = 50 * 1024 * 1024
 
 ALLOWED_FILE_TYPES = [
-    "image/jpeg",       
-    "image/png",        
-    "application/pdf",  
+    "image/jpeg",
+    "image/png",
+    "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/vnd.ms-excel",
@@ -13,5 +18,5 @@ ALLOWED_FILE_TYPES = [
     "text/csv",
     "application/vnd.ms-powerpoint",
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    "text/plain"
+    "text/plain",
 ]

@@ -1,0 +1,30 @@
+name: PEP 8 Check
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main  
+
+jobs:
+  pep8:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3 
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pycodestyle  # Install pycodestyle for PEP 8 checking
+
+    - name: Run PEP 8 check
+      run: |
+        pycodestyle --max-line-length=88  # Customize the line length as per your needs

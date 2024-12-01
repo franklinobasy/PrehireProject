@@ -14,26 +14,27 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.contrib import admin
 from django.urls import include, path, re_path
 
 from .swagger_config import schema_view
 
 
-# Test sentry
-def trigger_error(request):
-    division_by_zero = 1 / 0
-
-
 urlpatterns = [
-    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    path('sentry-debug/', trigger_error),
-
-
-    path('admin/', admin.site.urls),
-    path('api/auth/', include('authapp.urls')),
-    path('api/files/', include('files.urls')),
-    path('api/teams/', include('teams.urls')),
+    re_path(
+        r"^swagger(?P<format>\.json|\.yaml)$",
+        schema_view.without_ui(cache_timeout=0),
+        name="schema-json",
+    ),
+    path(
+        "swagger/",
+        schema_view.with_ui("swagger", cache_timeout=0),
+        name="schema-swagger-ui",
+    ),
+    path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
+    path("admin/", admin.site.urls),
+    path("api/auth/", include("authapp.urls")),
+    path("api/files/", include("files.urls")),
+    path("api/teams/", include("teams.urls")),
 ]

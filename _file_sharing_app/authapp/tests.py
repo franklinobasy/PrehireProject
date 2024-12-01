@@ -12,7 +12,9 @@ class AuthAppTests(APITestCase):
 
     def setUp(self):
         # Create a test user
-        self.user = User.objects.create_user(username="testuser", email="testuser@example.com", password="testpassword")
+        self.user = User.objects.create_user(
+            username="testuser", email="testuser@example.com", password="testpassword"
+        )
         self.register_url = "/api/auth/register/"
         self.login_url = "/api/auth/login/"
         self.logout_url = "/api/auth/logout/"
@@ -44,7 +46,6 @@ class AuthAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access", response.data)
 
-
     def test_login_invalid_credentials(self):
         """
         Test login with invalid credentials.
@@ -56,22 +57,23 @@ class AuthAppTests(APITestCase):
         response = self.client.post(self.login_url, data)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIn("detail", response.data)
-        self.assertEqual(response.data["detail"], "No active account found with the given credentials")
-
+        self.assertEqual(
+            response.data["detail"],
+            "No active account found with the given credentials",
+        )
 
     def test_logout_user(self):
         """
         Test user logout using refresh token.
         """
         # Log in the user to get the refresh token
-        login_response = self.client.post(self.login_url, {
-            "username": self.user.username, 
-            "password": "testpassword"
-        })
+        login_response = self.client.post(
+            self.login_url, {"username": self.user.username, "password": "testpassword"}
+        )
 
         refresh_token = login_response.data["refresh"]
         # Send the refresh token to logout
         response = self.client.post(self.logout_url, {"refresh": refresh_token})
 
         self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
-        self.assertEqual(response.data['message'], "Logged out successfully")
+        self.assertEqual(response.data["message"], "Logged out successfully")

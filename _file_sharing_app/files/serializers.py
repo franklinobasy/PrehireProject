@@ -1,19 +1,13 @@
 from rest_framework import serializers
 from .models import File, SharedFile
-from teams.models import Team
-from django.contrib.auth.models import User
 
-
-from rest_framework import serializers
-from .models import File, SharedFile
-from teams.models import Team
-from django.contrib.auth.models import User
 
 class FileSerializer(serializers.ModelSerializer):
     """
     Serializer for the File model, including metadata and access details.
     """
-    uploaded_by = serializers.ReadOnlyField(source='uploaded_by.username')
+
+    uploaded_by = serializers.ReadOnlyField(source="uploaded_by.username")
     shared_with_users = serializers.SerializerMethodField()
     shared_with_teams = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
@@ -22,7 +16,13 @@ class FileSerializer(serializers.ModelSerializer):
     class Meta:
         model = File
         fields = [
-            'uuid', 'file', 'uploaded_by', 'uploaded_at', 'shared_with_users', 'shared_with_teams', 'permissions'
+            "uuid",
+            "file",
+            "uploaded_by",
+            "uploaded_at",
+            "shared_with_users",
+            "shared_with_teams",
+            "permissions",
         ]
 
     def get_shared_with_users(self, obj):
@@ -64,8 +64,8 @@ class FileSerializer(serializers.ModelSerializer):
                 for team_permission in shared_info.teamfilepermission_set.all()
             }
 
-            permissions['users'] = user_permissions
-            permissions['teams'] = team_permissions
+            permissions["users"] = user_permissions
+            permissions["teams"] = team_permissions
 
         return permissions
 
@@ -73,7 +73,7 @@ class FileSerializer(serializers.ModelSerializer):
         """
         Create a new file and handle file upload logic.
         """
-        file = validated_data.pop('file')
+        file = validated_data.pop("file")
         instance = super().create(validated_data)
 
         # Set file metadata
@@ -91,5 +91,4 @@ class FileSerializer(serializers.ModelSerializer):
 class SharedFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = SharedFile
-        fields = ['file']
-
+        fields = ["file"]
