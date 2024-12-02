@@ -19,7 +19,6 @@ from drf_yasg import openapi
 from django.conf import settings
 from botocore.exceptions import ClientError
 
-from .config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE, CustomUploadThrottle
 from teams.models import Team
 from .models import (
     PERMISSION_CHOICES,
@@ -35,7 +34,6 @@ User = get_user_model()
 
 
 class FileUploadView(APIView):
-    throttle_classes = [CustomUploadThrottle]
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -51,18 +49,6 @@ class FileUploadView(APIView):
         if not file:
             return Response(
                 {"detail": "No file provided."}, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Validate file type and size
-
-        if file.content_type not in ALLOWED_FILE_TYPES:
-            return Response(
-                {"detail": "Unsupported file type."}, status=status.HTTP_400_BAD_REQUEST
-            )
-        if file.size > MAX_FILE_SIZE:
-            return Response(
-                {"detail": "File too large. Maximum size is 10MB."},
-                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Upload to S3

@@ -1,10 +1,3 @@
-from rest_framework.throttling import UserRateThrottle
-
-
-class CustomUploadThrottle(UserRateThrottle):
-    rate = "3/min"  # Limit to 3 requests per minute
-
-
 MAX_FILE_SIZE = 50 * 1024 * 1024
 
 ALLOWED_FILE_TYPES = [
