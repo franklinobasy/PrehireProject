@@ -19,7 +19,6 @@ from drf_yasg import openapi
 from django.conf import settings
 from botocore.exceptions import ClientError
 
-from .config import ALLOWED_FILE_TYPES, MAX_FILE_SIZE
 from teams.models import Team
 from .models import (
     PERMISSION_CHOICES,

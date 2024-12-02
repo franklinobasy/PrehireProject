@@ -1,6 +1,3 @@
-from rest_framework.throttling import UserRateThrottle
-
-
 MAX_FILE_SIZE = 50 * 1024 * 1024
 
 ALLOWED_FILE_TYPES = [

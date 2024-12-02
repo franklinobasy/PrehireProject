@@ -1,5 +1,4 @@
 import requests
-import time
 
 url = "http://localhost:8000/api/auth/login/"
 headers = {
