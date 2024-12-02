@@ -4,16 +4,6 @@ from drf_yasg import openapi
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
-# Define the authorization configuration for Swagger
-swagger_auth = openapi.Parameter(
-    "Authorization",
-    openapi.IN_HEADER,
-    description="JWT Authorization header using the Bearer scheme. Example: 'Bearer <your_token>'",
-    required=True,
-    type=openapi.TYPE_STRING,
-)
-
-
 schema_view = get_schema_view(
     openapi.Info(
         title="FileShare API",
