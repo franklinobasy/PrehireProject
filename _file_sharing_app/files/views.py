@@ -100,131 +100,106 @@ class FileRetrieveView(APIView):
         ],
     )
     def get(self, request):
-        uuid = request.query_params.get("uuid", None)
+        uuid = request.query_params.get("uuid")
+        user = request.user
 
-        # If a specific file UUID is provided, retrieve it
         if uuid:
-            try:
-                file = File.objects.get(uuid=uuid)
-            except File.DoesNotExist:
-                return Response(
-                    {"detail": "File not found."}, status=status.HTTP_404_NOT_FOUND
-                )
+            return self._get_file_metadata(uuid, user)
 
-            # Check permissions for the specific file
-            shared_file = file.shared_info
-            user_has_access = (
-                file.uploaded_by == request.user
-                or UserFilePermission.objects.filter(
-                    user=request.user, shared_file=shared_file
-                ).exists()
-                or TeamFilePermission.objects.filter(
-                    shared_file=shared_file, team__in=request.user.teams.all()
-                ).exists()
+        return self._get_all_files_metadata(user)
+
+    def _get_file_metadata(self, uuid, user):
+        try:
+            file = File.objects.get(uuid=uuid)
+        except File.DoesNotExist:
+            return Response(
+                {"detail": "File not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-            if not user_has_access:
-                return Response(
-                    {"detail": "Access denied."}, status=status.HTTP_403_FORBIDDEN
-                )
+        if not self._has_access(file, user):
+            return Response(
+                {"detail": "Access denied."}, status=status.HTTP_403_FORBIDDEN
+            )
 
-            # Determine user-specific permissions
-            user_permission = "view"  # Default permission
-            user_permission_obj = UserFilePermission.objects.filter(
-                user=request.user, shared_file=shared_file
-            ).first()
-            if user_permission_obj:
-                user_permission = user_permission_obj.permission
+        download_url = self._generate_download_url(file, user)
+        response_data = self._build_file_response(file, download_url, user)
+        return Response(response_data, status=status.HTTP_200_OK)
 
-            # Generate download URL if permitted
-            download_url = None
-            if (
-                user_permission in ["view-and-download", "edit"]
-                or file.uploaded_by == request.user
-            ):
-                s3_client = boto3.client("s3")
-                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-                try:
-                    download_url = s3_client.generate_presigned_url(
-                        "get_object",
-                        Params={"Bucket": bucket_name, "Key": file.key},
-                        ExpiresIn=3600,
-                    )
-                except ClientError as e:
-                    return Response(
-                        {"detail": f"Failed to generate download URL: {str(e)}"},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    )
-
-            # Prepare response for a single file
-            response_data = {
-                "file_uuid": file.uuid,
-                "owner": file.uploaded_by.username,
-                "file_name": file.file_name,
-                "file_size": file.file_size,
-                "uploaded_at": file.uploaded_at,
-                "permissions": user_permission,
-                "download_url": download_url,
-            }
-            return Response(response_data, status=status.HTTP_200_OK)
-
-        # If no UUID is provided, retrieve all files the user has access to
-        user_files = File.objects.filter(uploaded_by=request.user)
+    def _get_all_files_metadata(self, user):
+        user_files = File.objects.filter(uploaded_by=user)
         shared_files = SharedFile.objects.filter(
-            Q(userfilepermission__user=request.user)
-            | Q(teamfilepermission__team__in=request.user.teams.all())
+            Q(userfilepermission__user=user)
+            | Q(teamfilepermission__team__in=user.teams.all())
         ).distinct()
 
-        # Combine user files and shared files, ensuring distinct results
         accessible_files = (
             user_files.distinct()
             | File.objects.filter(shared_info__in=shared_files).distinct()
         )
 
-        # Build metadata for each accessible file
-        file_data = []
-        for file in accessible_files:
-            shared_file = file.shared_info
-            user_permission = "view"
-            if shared_file:
-                user_permission_obj = UserFilePermission.objects.filter(
-                    user=request.user, shared_file=shared_file
-                ).first()
-                user_permission = (
-                    user_permission_obj.permission if user_permission_obj else "view"
-                )
-
-            # Generate download URL if permitted
-            download_url = None
-            if (
-                user_permission in ["view-and-download", "edit"]
-                or file.uploaded_by == request.user
-            ):
-                s3_client = boto3.client("s3")
-                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-                try:
-                    download_url = s3_client.generate_presigned_url(
-                        "get_object",
-                        Params={"Bucket": bucket_name, "Key": file.key},
-                        ExpiresIn=3600,
-                    )
-                except ClientError:
-                    download_url = None  # Fallback in case of S3 error
-
-            # Append file metadata
-            file_data.append(
-                {
-                    "file_uuid": file.uuid,
-                    "owner": file.uploaded_by.username,
-                    "file_name": file.file_name,
-                    "file_size": file.file_size,
-                    "uploaded_at": file.uploaded_at,
-                    "permissions": user_permission,
-                    "download_url": download_url,
-                }
+        file_data = [
+            self._build_file_response(
+                file, self._generate_download_url(file, user), user
             )
-
+            for file in accessible_files
+        ]
         return Response(file_data, status=status.HTTP_200_OK)
+
+    def _has_access(self, file, user):
+        shared_file = file.shared_info
+        return (
+            file.uploaded_by == user
+            or UserFilePermission.objects.filter(
+                user=user, shared_file=shared_file
+            ).exists()
+            or TeamFilePermission.objects.filter(
+                shared_file=shared_file, team__in=user.teams.all()
+            ).exists()
+        )
+
+    def _generate_download_url(self, file, user):
+        shared_file = file.shared_info
+        permission = "view"
+        permission_obj = UserFilePermission.objects.filter(
+            user=user, shared_file=shared_file
+        ).first()
+        if permission_obj:
+            permission = permission_obj.permission
+
+        available_permissions = [_[0] for _ in PERMISSION_CHOICES]
+
+        if permission in available_permissions or file.uploaded_by == user:
+            s3_client = boto3.client("s3")
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            try:
+                return s3_client.generate_presigned_url(
+                    "get_object",
+                    Params={"Bucket": bucket_name, "Key": file.key},
+                    ExpiresIn=3600,
+                )
+            except ClientError:
+                return None
+        return None
+
+    def _build_file_response(self, file, download_url, user):
+        shared_file = file.shared_info
+        permission = "view"
+        if shared_file:
+            permission_obj = UserFilePermission.objects.filter(
+                user=user, shared_file=shared_file
+            ).first()
+            if permission_obj:
+                permission = permission_obj.permission
+
+        return {
+            "file_uuid": file.uuid,
+            "owner": file.uploaded_by.username,
+            "file_name": file.file_name,
+            "file_size": file.file_size,
+            "uploaded_at": file.uploaded_at,
+            "permissions": permission,
+            "download_url": download_url,
+        }
 
 
 class FileUpdateView(APIView):
